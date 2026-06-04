@@ -57,6 +57,7 @@ export abstract class BasePokemonType implements IPokemonType {
   private _generation: string;
   private _originalSpriteSize: number;
   private _customAnimations: ICharacterAnimations | undefined;
+  private _currentAnimationSrc: string | undefined;
 
   constructor(
     spriteElement: HTMLImageElement,
@@ -285,14 +286,17 @@ export abstract class BasePokemonType implements IPokemonType {
   setAnimation(face: string, hasLeftFacingSprite: boolean | undefined) {
     const nextSrc = this.getAnimationSrc(face, hasLeftFacingSprite);
 
-    if (this.el.src === nextSrc || this.el.src.endsWith(nextSrc)) {
+    if (this._currentAnimationSrc === nextSrc) {
       return;
     }
+    this._currentAnimationSrc = nextSrc;
     this.el.src = nextSrc;
   }
 
   setCustomAnimations(animations: ICharacterAnimations): void {
     this._customAnimations = animations;
+    this._currentAnimationSrc = undefined;
+    this.setAnimation(this.currentState.spriteLabel, false);
   }
 
   private getAnimationSrc(

@@ -6,6 +6,31 @@ export interface ICharacterAnimations {
   [animationLabel: string]: string;
 }
 
+const DEFAULT_ANIMATION_TICK_MS = 100;
+let animationTickMs = DEFAULT_ANIMATION_TICK_MS;
+let stateDurationMultiplier = 1;
+
+export function setPanelAnimationTiming(
+  tickMs: number,
+  durationMultiplier: number,
+): void {
+  animationTickMs =
+    Number.isFinite(tickMs) && tickMs > 0 ? tickMs : DEFAULT_ANIMATION_TICK_MS;
+  stateDurationMultiplier =
+    Number.isFinite(durationMultiplier) && durationMultiplier > 0
+      ? durationMultiplier
+      : 1;
+}
+
+function adjustedHoldTime(baseHoldTime: number): number {
+  const tickScale = DEFAULT_ANIMATION_TICK_MS / animationTickMs;
+  return baseHoldTime * tickScale * stateDurationMultiplier;
+}
+
+function movementStep(baseStep: number): number {
+  return baseStep * (animationTickMs / DEFAULT_ANIMATION_TICK_MS);
+}
+
 export interface IPokemonType {
   nextFrame(): void;
   setCustomAnimations(animations: ICharacterAnimations): void;
@@ -181,7 +206,7 @@ class AbstractStaticState implements IState {
 
   nextFrame(): FrameResult {
     this.idleCounter++;
-    if (this.idleCounter > this.holdTime) {
+    if (this.idleCounter > adjustedHoldTime(this.holdTime)) {
       return FrameResult.stateComplete;
     }
     return FrameResult.stateContinue;
@@ -249,7 +274,8 @@ export class WalkRightState implements IState {
   nextFrame(): FrameResult {
     this.idleCounter++;
     this.pokemon.positionLeft(
-      this.pokemon.left + this.pokemon.speed * this.speedMultiplier,
+      this.pokemon.left +
+        movementStep(this.pokemon.speed * this.speedMultiplier),
     );
 
     // Random chance to stop in the middle
@@ -262,7 +288,10 @@ export class WalkRightState implements IState {
       this.pokemon.left >= this.leftBoundary - this.pokemon.width
     ) {
       return FrameResult.stateComplete;
-    } else if (!this.pokemon.isMoving && this.idleCounter > this.holdTime) {
+    } else if (
+      !this.pokemon.isMoving &&
+      this.idleCounter > adjustedHoldTime(this.holdTime)
+    ) {
       return FrameResult.stateComplete;
     }
     return FrameResult.stateContinue;
@@ -286,7 +315,8 @@ export class WalkLeftState implements IState {
   nextFrame(): FrameResult {
     this.idleCounter++;
     this.pokemon.positionLeft(
-      this.pokemon.left - this.pokemon.speed * this.speedMultiplier,
+      this.pokemon.left -
+        movementStep(this.pokemon.speed * this.speedMultiplier),
     );
 
     // Random chance to stop in the middle
@@ -296,7 +326,10 @@ export class WalkLeftState implements IState {
 
     if (this.pokemon.isMoving && this.pokemon.left <= 0) {
       return FrameResult.stateComplete;
-    } else if (!this.pokemon.isMoving && this.idleCounter > this.holdTime) {
+    } else if (
+      !this.pokemon.isMoving &&
+      this.idleCounter > adjustedHoldTime(this.holdTime)
+    ) {
       return FrameResult.stateComplete;
     }
     return FrameResult.stateContinue;
@@ -341,10 +374,14 @@ export class ChaseState implements IState {
     }
     if (this.pokemon.left > this.ballState.cx) {
       this.horizontalDirection = HorizontalDirection.left;
-      this.pokemon.positionLeft(this.pokemon.left - this.pokemon.speed);
+      this.pokemon.positionLeft(
+        this.pokemon.left - movementStep(this.pokemon.speed),
+      );
     } else {
       this.horizontalDirection = HorizontalDirection.right;
-      this.pokemon.positionLeft(this.pokemon.left + this.pokemon.speed);
+      this.pokemon.positionLeft(
+        this.pokemon.left + movementStep(this.pokemon.speed),
+      );
     }
 
     if (
@@ -379,10 +416,14 @@ export class ChaseFriendState implements IState {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     if (this.pokemon.left > this.pokemon.friend!.left) {
       this.horizontalDirection = HorizontalDirection.left;
-      this.pokemon.positionLeft(this.pokemon.left - this.pokemon.speed);
+      this.pokemon.positionLeft(
+        this.pokemon.left - movementStep(this.pokemon.speed),
+      );
     } else {
       this.horizontalDirection = HorizontalDirection.right;
-      this.pokemon.positionLeft(this.pokemon.left + this.pokemon.speed);
+      this.pokemon.positionLeft(
+        this.pokemon.left + movementStep(this.pokemon.speed),
+      );
     }
 
     return FrameResult.stateContinue;
@@ -400,7 +441,7 @@ export class ClimbWallLeftState implements IState {
   }
 
   nextFrame(): FrameResult {
-    this.pokemon.positionBottom(this.pokemon.bottom + 1);
+    this.pokemon.positionBottom(this.pokemon.bottom + movementStep(1));
     if (this.pokemon.bottom >= 100) {
       return FrameResult.stateComplete;
     }
@@ -419,7 +460,7 @@ export class JumpDownLeftState implements IState {
   }
 
   nextFrame(): FrameResult {
-    this.pokemon.positionBottom(this.pokemon.bottom - 5);
+    this.pokemon.positionBottom(this.pokemon.bottom - movementStep(5));
     if (this.pokemon.bottom <= this.pokemon.floor) {
       this.pokemon.positionBottom(this.pokemon.floor);
       return FrameResult.stateComplete;

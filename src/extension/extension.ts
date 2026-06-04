@@ -25,6 +25,9 @@ const DEFAULT_COLOR = PokemonColor.default;
 const DEFAULT_POKEMON_TYPE = getDefaultPokemonType();
 const DEFAULT_POSITION = ExtPosition.panel;
 const CUSTOM_CHARACTER_STORAGE_FOLDER = 'custom-characters';
+const DEFAULT_ANIMATION_TICK_MS = 100;
+const DEFAULT_STATE_DURATION_MULTIPLIER = 1;
+const DEFAULT_IMAGE_RENDERING = 'pixelated';
 
 interface IUserCharacterConfig {
   type: string;
@@ -93,6 +96,18 @@ function resolveConfiguredGifPath(configPath: string): vscode.Uri | undefined {
     /^~(?=$|[\\/])/,
     process.env.HOME ?? '',
   );
+
+  const windowsDrivePath = /^([a-zA-Z]):[\\/](.*)$/.exec(expandedPath);
+  if (windowsDrivePath) {
+    if (process.platform === 'win32') {
+      return vscode.Uri.file(expandedPath);
+    }
+
+    const [, driveLetter, restOfPath] = windowsDrivePath;
+    return vscode.Uri.file(
+      `/mnt/${driveLetter.toLowerCase()}/${restOfPath.replace(/\\/g, '/')}`,
+    );
+  }
 
   if (path.isAbsolute(expandedPath)) {
     return vscode.Uri.file(expandedPath);
@@ -432,6 +447,34 @@ function getThrowWithMouseConfiguration(): boolean {
     .get<boolean>('throwBallWithMouse', true);
 }
 
+function getAnimationTickMsConfiguration(): number {
+  const tickMs = vscode.workspace
+    .getConfiguration('vscode-anime-companions')
+    .get<number>('animationTickMs', DEFAULT_ANIMATION_TICK_MS);
+
+  return Number.isFinite(tickMs) && tickMs > 0
+    ? tickMs
+    : DEFAULT_ANIMATION_TICK_MS;
+}
+
+function getStateDurationMultiplierConfiguration(): number {
+  const multiplier = vscode.workspace
+    .getConfiguration('vscode-anime-companions')
+    .get<number>('stateDurationMultiplier', DEFAULT_STATE_DURATION_MULTIPLIER);
+
+  return Number.isFinite(multiplier) && multiplier > 0
+    ? multiplier
+    : DEFAULT_STATE_DURATION_MULTIPLIER;
+}
+
+function getImageRenderingConfiguration(): string {
+  const imageRendering = vscode.workspace
+    .getConfiguration('vscode-anime-companions')
+    .get<string>('imageRendering', DEFAULT_IMAGE_RENDERING);
+
+  return imageRendering === 'auto' ? 'auto' : DEFAULT_IMAGE_RENDERING;
+}
+
 interface IDefaultPokemonConfig {
   type: PokemonType;
   name?: string;
@@ -595,10 +638,15 @@ export class PokemonSpecification {
     );
     var result: PokemonSpecification[] = [];
     for (let index = 0; index < contextTypes.length; index++) {
+      const type = contextTypes[index];
+      if (!characterExists(type)) {
+        continue;
+      }
+
       result.push(
         new PokemonSpecification(
           contextColors?.[index] ?? DEFAULT_COLOR,
-          contextTypes[index],
+          type,
           size,
           contextNames[index],
         ),
@@ -1163,7 +1211,12 @@ export function activate(context: vscode.ExtensionContext) {
           e.affectsConfiguration('vscode-anime-companions.characterType') ||
           e.affectsConfiguration('vscode-anime-companions.characterSize') ||
           e.affectsConfiguration('vscode-anime-companions.defaultCharacters') ||
-          e.affectsConfiguration('vscode-anime-companions.customCharacters')
+          e.affectsConfiguration('vscode-anime-companions.customCharacters') ||
+          e.affectsConfiguration('vscode-anime-companions.animationTickMs') ||
+          e.affectsConfiguration(
+            'vscode-anime-companions.stateDurationMultiplier',
+          ) ||
+          e.affectsConfiguration('vscode-anime-companions.imageRendering')
         ) {
           const spec = PokemonSpecification.fromConfiguration();
           const panel = getPokemonPanel();
@@ -1486,6 +1539,9 @@ class PokemonWebviewContainer implements IPokemonPanel {
                     font-family: 'silkscreen';
                     src: url('${silkScreenFontPath}') format('truetype');
                 }
+                :root {
+                    --character-image-rendering: ${getImageRenderingConfiguration()};
+                }
                 </style>
 				<title>VS Code Anime Companions</title>
 			</head>
@@ -1504,6 +1560,8 @@ class PokemonWebviewContainer implements IPokemonPanel {
                         "${this.pokemonGeneration()}",
                         "${this.pokemonOriginalSpriteSize()}",
                         ${JSON.stringify(userCharacterAssets)},
+                        ${getAnimationTickMsConfiguration()},
+                        ${getStateDurationMultiplierConfiguration()},
                     );
                 </script>
             </body>
@@ -1727,20 +1785,30 @@ class PokemonWebviewViewProvider extends PokemonWebviewContainer {
 
   async resolveWebviewView(webviewView: vscode.WebviewView): Promise<void> {
     this._webviewView = webviewView;
+    let spawnedInitialCollection = false;
 
     webviewView.webview.options = getWebviewOptions(this._extensionUri);
-    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
-
     webviewView.webview.onDidReceiveMessage(
-      handleWebviewMessage,
+      async (message: WebviewMessage) => {
+        handleWebviewMessage(message);
+
+        if (
+          message.command === 'ready' &&
+          spawnedInitialCollection === false &&
+          Number(message.text || '0') === 0
+        ) {
+          spawnedInitialCollection = true;
+          const collection = getSessionPokemonCollection(this._context);
+          if (shouldSpawnInitialCollection(collection)) {
+            await spawnAndPersistCollection(this._context, this, collection);
+          }
+        }
+      },
       null,
       this._disposables,
     );
 
-    const collection = getDefaultPokemonForFreshSession(this._context);
-    if (shouldSpawnInitialCollection(collection)) {
-      await spawnAndPersistCollection(this._context, this, collection);
-    }
+    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
   }
 
   update() {

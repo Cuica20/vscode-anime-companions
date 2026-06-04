@@ -1,5 +1,6 @@
 // This script will be run within the webview itself
 import { randomName } from '../common/names';
+import { POKEMON_DATA } from '../common/pokemon-data';
 import {
   PokemonSize,
   PokemonColor,
@@ -15,7 +16,11 @@ import {
   availableColors,
   InvalidPokemonException,
 } from './pokemon-collection';
-import { PokemonElementState, PokemonPanelState } from './states';
+import {
+  PokemonElementState,
+  PokemonPanelState,
+  setPanelAnimationTiming,
+} from './states';
 
 /* This is how the VS Code API can be invoked from the panel */
 declare global {
@@ -57,6 +62,7 @@ function handleMouseOver(e: MouseEvent) {
 function startAnimations(
   collision: HTMLDivElement,
   pokemon: IPokemonType,
+  animationTickMs: number,
   stateApi?: VscodeStateApi,
 ) {
   if (!stateApi) {
@@ -74,7 +80,7 @@ function startAnimations(
     });
     pokemon.nextFrame();
     saveState(stateApi);
-  }, 100);
+  }, animationTickMs);
 }
 
 function addPokemonToPanel(
@@ -89,11 +95,18 @@ function addPokemonToPanel(
   bottom: number,
   floor: number,
   name: string,
+  animationTickMs: number,
   stateApi?: VscodeStateApi,
   incrementCounter: boolean = true,
 ): PokemonElement {
   var pokemonSpriteElement: HTMLImageElement = document.createElement('img');
   pokemonSpriteElement.className = 'pokemon';
+  pokemonSpriteElement.addEventListener('error', () => {
+    stateApi?.postMessage({
+      command: 'alert',
+      text: `No se pudo cargar el GIF para ${pokemonType}: ${pokemonSpriteElement.src}`,
+    });
+  });
   (document.getElementById('pokemonContainer') as HTMLDivElement).appendChild(
     pokemonSpriteElement,
   );
@@ -146,7 +159,7 @@ function addPokemonToPanel(
     if (incrementCounter) {
       pokemonCounter++;
     }
-    startAnimations(collisionElement, newPokemon, stateApi);
+    startAnimations(collisionElement, newPokemon, animationTickMs, stateApi);
   } catch (e: unknown) {
     // Remove elements
     pokemonSpriteElement.remove();
@@ -320,6 +333,7 @@ function recoverState(
   gen: string,
   pokemonSize: PokemonSize,
   floor: number,
+  animationTickMs: number,
   stateApi?: VscodeStateApi,
 ) {
   if (!stateApi) {
@@ -338,11 +352,21 @@ function recoverState(
     state?.pokemonStates?.length ?? 0,
   );
   state?.pokemonStates?.forEach((p) => {
+    const pokemonType = p.pokemonType ?? 'naruto';
+    if (!POKEMON_DATA[pokemonType] && !userCharacterAssets[pokemonType]) {
+      console.log(
+        'State had pokemon without configured assets (' +
+          pokemonType +
+          '), discarding.',
+      );
+      return;
+    }
+
     console.log('Recovering pokemon ', p.pokemonType, p.pokemonName);
     try {
       console.log('Adding pokemon to panel for recovery');
       var newPokemon = addPokemonToPanel(
-        p.pokemonType ?? 'naruto',
+        pokemonType,
         basePokemonUri,
         userCharacterAssets,
         p.pokemonGeneration ?? 'custom',
@@ -353,6 +377,7 @@ function recoverState(
         parseInt(p.elBottom ?? '0'),
         floor,
         p.pokemonName ?? randomName(),
+        animationTickMs,
         stateApi,
         false,
       );
@@ -412,12 +437,15 @@ export function pokemonPanelApp(
   gen: string,
   originalSpriteSize: number,
   userCharacterAssets: UserCharacterAssets = {},
+  animationTickMs: number = 100,
+  stateDurationMultiplier: number = 1,
   stateApi?: VscodeStateApi,
 ) {
   var floor = 0;
   if (!stateApi) {
     stateApi = acquireVsCodeApi();
   }
+  setPanelAnimationTiming(animationTickMs, stateDurationMultiplier);
   const foregroundEl = document.getElementById('foreground');
   document.body.style.backgroundImage = '';
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -447,6 +475,7 @@ export function pokemonPanelApp(
       gen,
       pokemonSize,
       floor,
+      animationTickMs,
       stateApi,
     );
   } else {
@@ -477,6 +506,7 @@ export function pokemonPanelApp(
             floor,
             floor,
             message.name ?? randomName(),
+            animationTickMs,
             stateApi,
           ),
         );
@@ -527,6 +557,11 @@ export function pokemonPanelApp(
         saveState(stateApi);
         break;
     }
+  });
+
+  stateApi?.postMessage({
+    command: 'ready',
+    text: String(allPokemon.pokemonCollection.length),
   });
 }
 window.addEventListener('resize', function () {

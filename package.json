@@ -6,7 +6,7 @@
   "engines": {
     "vscode": "^1.73.0"
   },
-  "publisher": "javierCuicapuza",
+  "publisher": "DataScienceResearchPeru",
   "pricing": "Free",
   "categories": [
     "Other"
@@ -23,6 +23,14 @@
     "local"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cuica20/vscode-anime-companions.git"
+  },
+  "homepage": "https://github.com/Cuica20/vscode-anime-companions",
+  "bugs": {
+    "url": "https://github.com/Cuica20/vscode-anime-companions/issues"
+  },
   "icon": "icon.png",
   "activationEvents": [
     "onCommand:vscode-anime-companions.start",
@@ -42,6 +50,10 @@
   ],
   "main": "./out/extension/extension.js",
   "browser": "./dist/web/extension-web.js",
+  "extensionKind": [
+    "ui",
+    "workspace"
+  ],
   "contributes": {
     "views": {
       "explorer": [
@@ -186,6 +198,27 @@
             ],
             "default": "explorer",
             "description": "VS Code anime companions webview position"
+          },
+          "vscode-anime-companions.animationTickMs": {
+            "type": "number",
+            "default": 100,
+            "minimum": 16,
+            "description": "Milliseconds between movement updates. Lower values make movement smoother; 50 is a good value for higher-quality GIFs."
+          },
+          "vscode-anime-companions.stateDurationMultiplier": {
+            "type": "number",
+            "default": 1,
+            "minimum": 0.1,
+            "description": "Multiplier for how long each behavior state lasts before switching. Higher values let longer GIFs finish more often."
+          },
+          "vscode-anime-companions.imageRendering": {
+            "type": "string",
+            "enum": [
+              "pixelated",
+              "auto"
+            ],
+            "default": "pixelated",
+            "description": "Image rendering mode for companions. Use auto for high-resolution GIFs and pixelated for pixel art."
           },
           "vscode-anime-companions.defaultCharacters": {
             "type": "array",
