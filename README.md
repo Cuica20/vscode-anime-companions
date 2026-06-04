@@ -22,37 +22,47 @@ You can also add GIF paths manually in VS Code settings:
 {
   "vscode-anime-companions.customCharacters": [
     {
-      "type": "my-companion",
-      "name": "My Companion",
-      "idleGif": "C:/Users/richa/Pictures/anime/my_companion_idle.gif",
-      "walkGif": "C:/Users/richa/Pictures/anime/my_companion_walk.gif",
-      "animationGifs": {
-        "swipe": "C:/Users/richa/Pictures/anime/my_companion_swipe.gif",
-        "walk_left": "C:/Users/richa/Pictures/anime/my_companion_walk_left.gif"
-      },
-      "originalSpriteSize": 32
+      "type": "digimon-gif",
+      "name": "Digimon GIF",
+      "idleGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/animes2/digimon GIF.gif",
+      "walkGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/animes2/digimon GIF.gif",
+      "originalSpriteSize": 50
     },
     {
-      "type": "second-companion",
-      "name": "Second Companion",
-      "idleGif": "gifs/second_idle.gif",
-      "walkGif": "gifs/second_walk.gif",
-      "originalSpriteSize": 64
+      "type": "fullmetal-alchemist-4",
+      "name": "Fullmetal Alchemist 4",
+      "idleGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/animes2/fullmetal_alchemist_4.gif",
+      "walkGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/animes2/fullmetal_alchemist_4.gif",
+      "originalSpriteSize": 50
+    },
+    {
+      "type": "rurouni-kenshin-6",
+      "name": "Rurouni Kenshin 6",
+      "idleGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/animes2/rurouni_kenshin_6.gif",
+      "walkGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/animes2/rurouni_kenshin_6.gif",
+      "originalSpriteSize": 50
     }
   ],
   "vscode-anime-companions.defaultCharacters": [
-    { "type": "my-companion", "name": "My Companion" },
-    { "type": "second-companion", "name": "Second Companion" }
+    { "type": "digimon-gif", "name": "Digimon GIF" },
+    { "type": "fullmetal-alchemist-4", "name": "Fullmetal Alchemist 4" },
+    { "type": "rurouni-kenshin-6", "name": "Rurouni Kenshin 6" }
   ],
   "vscode-anime-companions.characterSize": "medium",
   "vscode-anime-companions.position": "explorer",
-  "vscode-anime-companions.animationTickMs": 50,
+  "vscode-anime-companions.animationTickMs": 33,
   "vscode-anime-companions.stateDurationMultiplier": 2,
   "vscode-anime-companions.imageRendering": "auto"
 }
 ```
 
-The example above uses Windows absolute paths from the `C:` drive. Forward slashes are recommended in JSON because they avoid escaping backslashes.
+The example above uses Windows absolute paths from the `C:` drive and spawns three companions at the same time in the Explorer view. Forward slashes are recommended in JSON because they avoid escaping backslashes.
+
+For high-resolution or longer GIFs, these settings help the movement feel smoother:
+
+- `animationTickMs`: lower values update movement more often. `33` is close to 30 updates per second.
+- `stateDurationMultiplier`: higher values keep each behavior active longer, so longer GIFs have more time to play.
+- `imageRendering`: use `auto` for high-resolution GIFs and `pixelated` for pixel art.
 
 `idleGif`, `walkGif`, and `animationGifs` values can be absolute paths, `~/` paths, or paths relative to the open workspace folder.
 
