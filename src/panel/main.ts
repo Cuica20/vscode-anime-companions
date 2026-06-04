@@ -1,0 +1,534 @@
+// This script will be run within the webview itself
+import { randomName } from '../common/names';
+import {
+  PokemonSize,
+  PokemonColor,
+  PokemonType,
+  WebviewMessage,
+} from '../common/types';
+import { ICharacterAnimations, IPokemonType } from './states';
+import {
+  createPokemon,
+  PokemonCollection,
+  PokemonElement,
+  IPokemonCollection,
+  availableColors,
+  InvalidPokemonException,
+} from './pokemon-collection';
+import { PokemonElementState, PokemonPanelState } from './states';
+
+/* This is how the VS Code API can be invoked from the panel */
+declare global {
+  interface VscodeStateApi {
+    getState(): PokemonPanelState | undefined; // API is actually Any, but we want it to be typed.
+    setState(state: PokemonPanelState): void;
+    postMessage(message: WebviewMessage): void;
+  }
+  function acquireVsCodeApi(): VscodeStateApi;
+}
+
+export var allPokemon: IPokemonCollection = new PokemonCollection();
+var pokemonCounter: number;
+
+interface UserCharacterAssets {
+  [type: string]: ICharacterAnimations;
+}
+
+function normalizePokemonCounter(counter: number | undefined): number {
+  if (counter === undefined || Number.isNaN(counter)) {
+    return 0;
+  }
+
+  return Math.max(0, counter);
+}
+
+function handleMouseOver(e: MouseEvent) {
+  var el = e.currentTarget as HTMLDivElement;
+  allPokemon.pokemonCollection.forEach((element) => {
+    if (element.collision === el) {
+      if (!element.pokemon.canSwipe) {
+        return;
+      }
+      element.pokemon.swipe();
+    }
+  });
+}
+
+function startAnimations(
+  collision: HTMLDivElement,
+  pokemon: IPokemonType,
+  stateApi?: VscodeStateApi,
+) {
+  if (!stateApi) {
+    stateApi = acquireVsCodeApi();
+  }
+
+  collision.addEventListener('mouseover', handleMouseOver);
+  setInterval(() => {
+    var updates = allPokemon.seekNewFriends();
+    updates.forEach((message) => {
+      stateApi?.postMessage({
+        text: message,
+        command: 'info',
+      });
+    });
+    pokemon.nextFrame();
+    saveState(stateApi);
+  }, 100);
+}
+
+function addPokemonToPanel(
+  pokemonType: PokemonType,
+  basePokemonUri: string,
+  userCharacterAssets: UserCharacterAssets,
+  gen: string,
+  originalSpriteSize: number,
+  pokemonColor: PokemonColor,
+  pokemonSize: PokemonSize,
+  left: number,
+  bottom: number,
+  floor: number,
+  name: string,
+  stateApi?: VscodeStateApi,
+  incrementCounter: boolean = true,
+): PokemonElement {
+  var pokemonSpriteElement: HTMLImageElement = document.createElement('img');
+  pokemonSpriteElement.className = 'pokemon';
+  (document.getElementById('pokemonContainer') as HTMLDivElement).appendChild(
+    pokemonSpriteElement,
+  );
+
+  var collisionElement: HTMLDivElement = document.createElement('div');
+  collisionElement.className = 'collision';
+  (document.getElementById('pokemonContainer') as HTMLDivElement).appendChild(
+    collisionElement,
+  );
+
+  var speechBubbleElement: HTMLImageElement = document.createElement('img');
+  speechBubbleElement.className = `bubble bubble-${pokemonSize} b-${originalSpriteSize}`;
+  speechBubbleElement.src = `${basePokemonUri}/heart.png`;
+  (document.getElementById('pokemonContainer') as HTMLDivElement).appendChild(
+    speechBubbleElement,
+  );
+
+  const configuredAssets = userCharacterAssets[pokemonType];
+  const root = `${basePokemonUri}/${gen}/${pokemonType}/${pokemonColor}`;
+  console.log(
+    'Creating new pokemon : ',
+    pokemonType,
+    root,
+    pokemonColor,
+    pokemonSize,
+    name,
+    originalSpriteSize,
+  );
+  try {
+    if (!availableColors(pokemonType).includes(pokemonColor)) {
+      throw new InvalidPokemonException('Invalid color for pokemon type');
+    }
+    var newPokemon = createPokemon(
+      pokemonType,
+      pokemonSpriteElement,
+      collisionElement,
+      speechBubbleElement,
+      pokemonSize,
+      left,
+      bottom,
+      root,
+      floor,
+      name,
+      gen,
+      originalSpriteSize,
+    );
+    if (configuredAssets) {
+      newPokemon.setCustomAnimations(configuredAssets);
+    }
+    if (incrementCounter) {
+      pokemonCounter++;
+    }
+    startAnimations(collisionElement, newPokemon, stateApi);
+  } catch (e: unknown) {
+    // Remove elements
+    pokemonSpriteElement.remove();
+    collisionElement.remove();
+    speechBubbleElement.remove();
+    throw e;
+  }
+
+  pokemonSpriteElement.style.opacity = '0';
+
+  const pokeballEl = document.createElement('div');
+  pokeballEl.classList.add('pokeball-sprite');
+
+  // Position pokeball at pokemon location + pokemon center offset
+  pokeballEl.style.left = `${left}px`;
+  pokeballEl.style.bottom = `${bottom}px`;
+
+  (document.getElementById('pokemonContainer') as HTMLDivElement).appendChild(
+    pokeballEl,
+  );
+
+  pokeballEl.offsetHeight;
+  pokeballEl.classList.add('pokeball-open');
+
+  // show pokemon earlier while pokeball animation is still running
+  const computed = window.getComputedStyle(pokeballEl);
+  const durationStr = (computed.animationDuration || '0s').split(',')[0].trim();
+  const durationMs = durationStr.endsWith('ms')
+    ? parseFloat(durationStr)
+    : parseFloat(durationStr) * 1000;
+
+  const spawnRatio = 0.7;
+  const spawnDelay = Math.max(0, durationMs * spawnRatio);
+
+  let spawned = false;
+  const showPokemon = () => {
+    if (spawned) {
+      return;
+    }
+    spawned = true;
+    pokemonSpriteElement.classList.add('spawn-pop');
+    pokemonSpriteElement.style.opacity = '1';
+
+    saveState(stateApi);
+  };
+
+  const spawnTimeout = setTimeout(showPokemon, spawnDelay);
+
+  pokeballEl.addEventListener('animationend', (e) => {
+    if (e.animationName !== 'pokeball-open') {
+      return;
+    }
+    pokeballEl.remove();
+    clearTimeout(spawnTimeout);
+    showPokemon();
+  });
+
+  return new PokemonElement(
+    pokemonSpriteElement,
+    collisionElement,
+    speechBubbleElement,
+    newPokemon,
+    pokemonColor,
+    pokemonType,
+    gen,
+    originalSpriteSize,
+  );
+}
+
+function removePokemonFromPanel(
+  message: { name: string },
+  stateApi?: VscodeStateApi,
+) {
+  if (!stateApi) {
+    stateApi = acquireVsCodeApi();
+  }
+  // Remove elements
+  var pokemon = allPokemon.locate(message.name);
+
+  if (!pokemon) {
+    stateApi?.postMessage({
+      command: 'error',
+      text: `Could not find pokemon ${message.name}`,
+    });
+    return;
+  }
+
+  var pokemonSpriteElement = pokemon.el;
+  console.log('Removing pokemon ', message.name);
+  console.log('pokemon:', pokemon);
+
+  // Remove from collection immediately so rapid deletes of Pokemon don't interfere with each other
+  allPokemon.removeFromCollection(message.name);
+  pokemon.collision.remove();
+  pokemon.speech.remove();
+  pokemonCounter = normalizePokemonCounter(pokemonCounter - 1);
+  saveState(stateApi);
+
+  stateApi?.postMessage({
+    command: 'info',
+    text: '👋 Removed pokemon ' + message.name,
+  });
+
+  // pokemon fade out
+  pokemonSpriteElement.classList.add('fade-out');
+
+  const pokeballEl = document.createElement('div');
+  pokeballEl.classList.add('pokeball-sprite');
+
+  pokeballEl.style.left = `${pokemon.pokemon.left}px`;
+  pokeballEl.style.bottom = `${pokemon.pokemon.bottom}px`;
+
+  const container = document.getElementById(
+    'pokemonContainer',
+  ) as HTMLDivElement;
+  container.appendChild(pokeballEl);
+
+  pokeballEl.offsetHeight;
+  pokeballEl.classList.add('pokeball-close');
+
+  pokemonSpriteElement.addEventListener(
+    'animationend',
+    (e) => {
+      if (e.animationName !== 'pokemon-fade-out') {
+        return;
+      }
+      pokemonSpriteElement.remove();
+    },
+    { once: true },
+  );
+
+  pokeballEl.addEventListener(
+    'animationend',
+    (e) => {
+      if (e.animationName !== 'pokeball-close') {
+        return;
+      }
+      pokeballEl.remove();
+    },
+    { once: true },
+  );
+}
+
+export function saveState(stateApi?: VscodeStateApi) {
+  if (!stateApi) {
+    stateApi = acquireVsCodeApi();
+  }
+  var state = new PokemonPanelState();
+  state.pokemonStates = [];
+
+  allPokemon.pokemonCollection.forEach((pokemonItem) => {
+    state.pokemonStates?.push({
+      pokemonName: pokemonItem.pokemon.name,
+      pokemonColor: pokemonItem.color,
+      pokemonType: pokemonItem.type,
+      pokemonState: pokemonItem.pokemon.getState(),
+      pokemonGeneration: pokemonItem.generation,
+      originalSpriteSize: pokemonItem.originalSpriteSize,
+      pokemonFriend: pokemonItem.pokemon.friend?.name ?? undefined,
+      elLeft: pokemonItem.el.style.left,
+      elBottom: pokemonItem.el.style.bottom,
+    });
+  });
+  state.pokemonCounter = normalizePokemonCounter(pokemonCounter);
+  stateApi?.setState(state);
+}
+
+function recoverState(
+  basePokemonUri: string,
+  userCharacterAssets: UserCharacterAssets,
+  gen: string,
+  pokemonSize: PokemonSize,
+  floor: number,
+  stateApi?: VscodeStateApi,
+) {
+  if (!stateApi) {
+    stateApi = acquireVsCodeApi();
+  }
+  var state = stateApi?.getState();
+  if (!state) {
+    pokemonCounter = 0;
+  } else {
+    pokemonCounter = normalizePokemonCounter(state.pokemonCounter);
+  }
+
+  var recoveryMap: Map<IPokemonType, PokemonElementState> = new Map();
+  console.log(
+    'recoverState: saved pokemon count =',
+    state?.pokemonStates?.length ?? 0,
+  );
+  state?.pokemonStates?.forEach((p) => {
+    console.log('Recovering pokemon ', p.pokemonType, p.pokemonName);
+    try {
+      console.log('Adding pokemon to panel for recovery');
+      var newPokemon = addPokemonToPanel(
+        p.pokemonType ?? 'naruto',
+        basePokemonUri,
+        userCharacterAssets,
+        p.pokemonGeneration ?? 'custom',
+        p.originalSpriteSize ?? 32,
+        p.pokemonColor ?? PokemonColor.default,
+        pokemonSize,
+        parseInt(p.elLeft ?? '0'),
+        parseInt(p.elBottom ?? '0'),
+        floor,
+        p.pokemonName ?? randomName(),
+        stateApi,
+        false,
+      );
+      allPokemon.push(newPokemon);
+      recoveryMap.set(newPokemon.pokemon, p);
+    } catch (InvalidPokemonException) {
+      console.log(
+        'State had invalid pokemon (' + p.pokemonType + '), discarding.',
+      );
+    }
+  });
+  recoveryMap.forEach((state, pokemon) => {
+    // Recover previous state.
+    if (state.pokemonState !== undefined) {
+      pokemon.recoverState(state.pokemonState);
+    }
+
+    // Resolve friend relationships
+    var friend = undefined;
+    if (state.pokemonFriend) {
+      friend = allPokemon.locate(state.pokemonFriend);
+      if (friend) {
+        pokemon.recoverFriend(friend.pokemon);
+      }
+    }
+  });
+}
+
+function randomStartPosition(): number {
+  return Math.floor(Math.random() * (window.innerWidth * 0.7));
+}
+
+let canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D;
+
+function initCanvas() {
+  canvas = document.getElementById('pokemonCanvas') as HTMLCanvasElement;
+  if (!canvas) {
+    console.log('Canvas not ready');
+    return;
+  }
+  ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  if (!ctx) {
+    console.log('Canvas context not ready');
+    return;
+  }
+  ctx.canvas.width = window.innerWidth;
+  ctx.canvas.height = window.innerHeight;
+}
+
+// It cannot access the main VS Code APIs directly.
+export function pokemonPanelApp(
+  basePokemonUri: string,
+  pokemonColor: PokemonColor,
+  pokemonSize: PokemonSize,
+  pokemonType: PokemonType,
+  throwBallWithMouse: boolean,
+  gen: string,
+  originalSpriteSize: number,
+  userCharacterAssets: UserCharacterAssets = {},
+  stateApi?: VscodeStateApi,
+) {
+  var floor = 0;
+  if (!stateApi) {
+    stateApi = acquireVsCodeApi();
+  }
+  const foregroundEl = document.getElementById('foreground');
+  document.body.style.backgroundImage = '';
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  foregroundEl!.style.backgroundImage = '';
+
+  console.log(
+    'Starting pokemon session',
+    pokemonColor,
+    basePokemonUri,
+    pokemonType,
+    throwBallWithMouse,
+  );
+
+  // New session
+  var state = stateApi?.getState();
+
+  const hasRecoverableState =
+    state !== undefined &&
+    Array.isArray(state.pokemonStates) &&
+    state.pokemonStates.length > 0;
+
+  if (hasRecoverableState) {
+    console.log('Recovering state - ', state);
+    recoverState(
+      basePokemonUri,
+      userCharacterAssets,
+      gen,
+      pokemonSize,
+      floor,
+      stateApi,
+    );
+  } else {
+    console.log('No recoverable pokemon state, starting an empty session.');
+    pokemonCounter = normalizePokemonCounter(state?.pokemonCounter);
+    saveState(stateApi);
+  }
+
+  initCanvas();
+
+  // Handle messages sent from the extension to the webview
+  window.addEventListener('message', (event): void => {
+    const message = event.data; // The json data that the extension sent
+    console.log('Received message in panel:', message);
+    switch (message.command) {
+      case 'spawn-character':
+        console.log('adding pokemon to panel from message', message);
+        allPokemon.push(
+          addPokemonToPanel(
+            message.type,
+            basePokemonUri,
+            userCharacterAssets,
+            message.generation,
+            message.originalSpriteSize,
+            message.color,
+            pokemonSize,
+            randomStartPosition(),
+            floor,
+            floor,
+            message.name ?? randomName(),
+            stateApi,
+          ),
+        );
+        saveState(stateApi);
+        break;
+
+      case 'list-pokemon':
+        var pokemonCollection = allPokemon.pokemonCollection;
+        stateApi?.postMessage({
+          command: 'list-pokemon',
+          text: pokemonCollection
+            .map(
+              (pokemon) =>
+                `${pokemon.type},${pokemon.pokemon.name},${pokemon.color}`,
+            )
+            .join('\n'),
+        });
+        break;
+
+      case 'roll-call':
+        var pokemonCollection = allPokemon.pokemonCollection;
+        // go through every single
+        // pokemon and then print out their name
+        pokemonCollection.forEach((pokemon) => {
+          stateApi?.postMessage({
+            command: 'info',
+            text: `${pokemon.pokemon.emoji} ${pokemon.pokemon.name} (${pokemon.color} ${pokemon.type}): ${pokemon.pokemon.hello}`,
+          });
+        });
+        break;
+      case 'delete-character':
+        removePokemonFromPanel(message, stateApi);
+        break;
+      case 'reset-pokemon':
+        var pokemonToRemove = [...allPokemon.pokemonCollection];
+        pokemonToRemove.forEach((pokemon) => {
+          removePokemonFromPanel({ name: pokemon.pokemon.name }, stateApi);
+        });
+        // Wait for animations to complete before resetting
+        setTimeout(() => {
+          allPokemon.reset();
+          pokemonCounter = 0;
+          saveState(stateApi);
+        }, 500);
+        break;
+      case 'pause-pokemon':
+        pokemonCounter = 1;
+        saveState(stateApi);
+        break;
+    }
+  });
+}
+window.addEventListener('resize', function () {
+  initCanvas();
+});

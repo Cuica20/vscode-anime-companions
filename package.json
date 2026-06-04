@@ -1,0 +1,313 @@
+{
+  "name": "vscode-anime-companions",
+  "displayName": "VS Code Anime Companions",
+  "description": "Custom anime-style companions for your VS Code",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.73.0"
+  },
+  "publisher": "javierCuicapuza",
+  "pricing": "Free",
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "anime",
+    "companions",
+    "sprites",
+    "pixelart",
+    "pixel",
+    "vscode",
+    "gif",
+    "custom",
+    "local"
+  ],
+  "license": "MIT",
+  "icon": "icon.png",
+  "activationEvents": [
+    "onCommand:vscode-anime-companions.start",
+    "onCommand:vscode-anime-companions.add-custom-character",
+    "onCommand:vscode-anime-companions.spawn-character",
+    "onCommand:vscode-anime-companions.spawn-random-character",
+    "onCommand:vscode-anime-companions.delete-character",
+    "onCommand:vscode-anime-companions.remove-all-characters",
+    "onCommand:vscode-anime-companions.roll-call",
+    "onCommand:vscode-anime-companions.export-character-list",
+    "onCommand:vscode-anime-companions.import-character-list",
+    "onCommand:vscode-anime-companions.configure-keybindings",
+    "onWebviewPanel:animeCompanionsCoding",
+    "onView:explorer",
+    "onView:animeCompanionsView",
+    "onStartupFinished"
+  ],
+  "main": "./out/extension/extension.js",
+  "browser": "./dist/web/extension-web.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "animeCompanionsView",
+          "name": "Anime Companions",
+          "when": "vscode-anime-companions.position == 'explorer'",
+          "icon": "media/icon/dark-add.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "vscode-anime-companions.spawn-character",
+          "when": "view == animeCompanionsView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vscode-anime-companions.spawn-random-character",
+          "when": "view == animeCompanionsView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vscode-anime-companions.delete-character",
+          "when": "view == animeCompanionsView",
+          "group": "navigation@3"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "vscode-anime-companions.start",
+        "title": "Start anime companions session",
+        "category": "Anime Companions"
+      },
+      {
+        "command": "vscode-anime-companions.export-character-list",
+        "title": "Export character list",
+        "category": "Anime Companions"
+      },
+      {
+        "command": "vscode-anime-companions.import-character-list",
+        "title": "Import character list",
+        "category": "Anime Companions"
+      },
+      {
+        "command": "vscode-anime-companions.add-custom-character",
+        "title": "Add custom companion from GIFs",
+        "category": "Anime Companions"
+      },
+      {
+        "command": "vscode-anime-companions.spawn-character",
+        "title": "Spawn additional character",
+        "category": "Anime Companions",
+        "icon": {
+          "dark": "media/icon/dark-add.svg",
+          "light": "media/icon/light-add.svg"
+        }
+      },
+      {
+        "command": "vscode-anime-companions.spawn-random-character",
+        "title": "Spawn random additional character",
+        "category": "Anime Companions",
+        "icon": {
+          "dark": "media/icon/dark-random.svg",
+          "light": "media/icon/light-random.svg"
+        }
+      },
+      {
+        "command": "vscode-anime-companions.delete-character",
+        "title": "Remove character",
+        "category": "Anime Companions",
+        "icon": {
+          "dark": "media/icon/dark-trash.svg",
+          "light": "media/icon/light-trash.svg"
+        }
+      },
+      {
+        "command": "vscode-anime-companions.remove-all-characters",
+        "title": "Remove all characters",
+        "category": "Anime Companions",
+        "icon": {
+          "dark": "media/icon/dark-trash.svg",
+          "light": "media/icon/light-trash.svg"
+        }
+      },
+      {
+        "command": "vscode-anime-companions.roll-call",
+        "title": "Roll-call",
+        "category": "Anime Companions"
+      },
+      {
+        "command": "vscode-anime-companions.configure-keybindings",
+        "title": "Configure keybindings",
+        "category": "Anime Companions"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "vscode-anime-companions.spawn-character",
+        "key": "alt+shift+w",
+        "mac": "alt+shift+w"
+      },
+      {
+        "command": "vscode-anime-companions.spawn-random-character",
+        "key": "alt+shift+q",
+        "mac": "alt+shift+q"
+      },
+      {
+        "command": "vscode-anime-companions.delete-character",
+        "key": "alt+shift+d",
+        "mac": "alt+shift+d"
+      },
+      {
+        "command": "vscode-anime-companions.remove-all-characters",
+        "key": "alt+shift+backspace",
+        "mac": "alt+shift+backspace"
+      }
+    ],
+    "configuration": [
+      {
+        "title": "VS Code Anime Companions",
+        "properties": {
+          "vscode-anime-companions.characterSize": {
+            "type": "string",
+            "enum": [
+              "nano",
+              "small",
+              "medium",
+              "large"
+            ],
+            "default": "medium",
+            "description": "Character size"
+          },
+          "vscode-anime-companions.position": {
+            "type": "string",
+            "enum": [
+              "panel",
+              "explorer"
+            ],
+            "default": "explorer",
+            "description": "VS Code anime companions webview position"
+          },
+          "vscode-anime-companions.defaultCharacters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Character type matching a folder under media/custom"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Custom name for the character (optional)"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "default": [],
+            "description": "List of default characters to automatically spawn on startup. Each character should have a 'type' (required), and optionally 'name'. Example: [{\"type\": \"naruto\", \"name\": \"Naruto\"}, {\"type\": \"goku\"}]"
+          },
+          "vscode-anime-companions.customCharacters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "description": "Unique character id used in defaultCharacters and saved collections"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Display name shown in the spawn picker"
+                },
+                "idleGif": {
+                  "type": "string",
+                  "description": "Absolute path, ~/ path, or workspace-relative path to the idle GIF"
+                },
+                "walkGif": {
+                  "type": "string",
+                  "description": "Absolute path, ~/ path, or workspace-relative path to the walking GIF"
+                },
+                "animationGifs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Optional extra animation GIFs by panel animation label. Supported labels include walk_left, swipe, lie, wallgrab, land, with_ball, run, and stand."
+                },
+                "originalSpriteSize": {
+                  "type": "number",
+                  "default": 32,
+                  "description": "Original pixel size of the GIF sprite before extension scaling"
+                }
+              },
+              "required": [
+                "type",
+                "idleGif",
+                "walkGif"
+              ]
+            },
+            "default": [],
+            "description": "User-defined companions loaded from GIF files outside the extension. Example: [{\"type\":\"hinata\",\"name\":\"Hinata\",\"idleGif\":\"gifs/hinata_idle.gif\",\"walkGif\":\"gifs/hinata_walk.gif\",\"animationGifs\":{\"swipe\":\"gifs/hinata_swipe.gif\"},\"originalSpriteSize\":32}]"
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile:panel": "webpack",
+    "compile:extension": "tsc -p ./tsconfig.extension.json",
+    "compile:test": "tsc -p ./tsconfig.test.json",
+    "compile:web": "webpack",
+    "compile": "npm run compile:panel && npm run compile:extension && npm run compile:test && npm run compile:web",
+    "watch": "webpack && tsc -watch -p ./tsconfig.extension.json",
+    "watch:web": "webpack --watch",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix",
+    "format:check": "prettier --check src",
+    "format": "prettier --write src",
+    "test": "node ./out/test/runTest.js",
+    "test:coverage": "COVERAGE=1 node ./out/test/runTest.js",
+    "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/suite/index.js",
+    "test:gifs": "node ./out/test/gifs.js"
+  },
+  "devDependencies": {
+    "@rbarilani/remove-source-map-url-webpack-plugin": "^1.1.0",
+    "@types/glob": "^7.1.3",
+    "@types/jsdom": "^20.0.0",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.73.0",
+    "@typescript-eslint/eslint-plugin": "^5.29.0",
+    "@typescript-eslint/parser": "^5.29.0",
+    "@vscode/test-web": "^0.0.50",
+    "eslint": "^8.18.0",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-unused-imports": "^2.0.0",
+    "glob": "^8.0.3",
+    "gulp": "^5.0.0",
+    "jsdom": "^20.0.0",
+    "jsdom-global": "^3.0.2",
+    "mocha": "^10.0.0",
+    "nyc": "^15.1.0",
+    "path-browserify": "^1.0.1",
+    "prettier": "^3.3.3",
+    "process": "^0.11.10",
+    "ts-loader": "^9.3.0",
+    "typescript": "^4.7.4",
+    "typescript-eslint": "^0.0.1-alpha.0",
+    "vscode-test": "^1.4.0",
+    "webpack": "5.95.0",
+    "webpack-cli": "^4.10.0"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}
