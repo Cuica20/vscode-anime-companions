@@ -2,6 +2,8 @@
 
 Minimal VS Code extension for showing animated GIF companions in the editor.
 
+This project is a fork of [jakobhoeg/vscode-pokemon](https://github.com/jakobhoeg/vscode-pokemon/tree/main), adapted to support configurable anime GIF companions.
+
 ## Configure Your Own GIFs
 
 Users do not need to edit the source code to add companions.
@@ -125,6 +127,9 @@ npm install
 npm run compile
 npx @vscode/vsce package
 code --install-extension vscode-anime-companions-0.1.1.vsix
+
+npx @vscode/vsce publish patch --pat TU_TOKEN
+
 ```
 
 Use copyrighted character artwork only where you have the rights or for personal local use.
