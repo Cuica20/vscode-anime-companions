@@ -2,7 +2,7 @@
   "name": "vscode-anime-companions",
   "displayName": "VS Code Anime Companions",
   "description": "Custom anime-style companions for your VS Code",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "engines": {
     "vscode": "^1.73.0"
   },
