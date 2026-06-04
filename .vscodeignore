@@ -13,3 +13,4 @@ coverage/
 docs/
 node_modules
 .vsce-file-polyfill.cjs
+media/custom/**

@@ -2,7 +2,7 @@
   "name": "vscode-anime-companions",
   "displayName": "VS Code Anime Companions",
   "description": "Custom anime-style companions for your VS Code",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.73.0"
   },
@@ -239,7 +239,7 @@
               ]
             },
             "default": [],
-            "description": "List of default characters to automatically spawn on startup. Each character should have a 'type' (required), and optionally 'name'. Example: [{\"type\": \"naruto\", \"name\": \"Naruto\"}, {\"type\": \"goku\"}]"
+            "description": "List of custom characters to automatically spawn on startup. Each type must match a configured customCharacters entry. Example: [{\"type\": \"my-companion\", \"name\": \"My Companion\"}]"
           },
           "vscode-anime-companions.customCharacters": {
             "type": "array",
@@ -282,7 +282,7 @@
               ]
             },
             "default": [],
-            "description": "User-defined companions loaded from GIF files outside the extension. Example: [{\"type\":\"hinata\",\"name\":\"Hinata\",\"idleGif\":\"gifs/hinata_idle.gif\",\"walkGif\":\"gifs/hinata_walk.gif\",\"animationGifs\":{\"swipe\":\"gifs/hinata_swipe.gif\"},\"originalSpriteSize\":32}]"
+            "description": "User-defined companions loaded from GIF files outside the extension. Example: [{\"type\":\"my-companion\",\"name\":\"My Companion\",\"idleGif\":\"gifs/idle.gif\",\"walkGif\":\"gifs/walk.gif\",\"animationGifs\":{\"swipe\":\"gifs/swipe.gif\"},\"originalSpriteSize\":32}]"
           }
         }
       }

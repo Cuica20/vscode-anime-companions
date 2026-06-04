@@ -380,12 +380,7 @@ async function addCustomCharacterFromGifs(
 }
 
 function getBuiltInCharacters(): ICharacterDefinition[] {
-  return Object.entries(POKEMON_DATA).map(([type, config]) => ({
-    type: type as PokemonType,
-    name: config.name,
-    originalSpriteSize: config.originalSpriteSize || 32,
-    isUserConfigured: false,
-  }));
+  return [];
 }
 
 function getAvailableCharacters(): ICharacterDefinition[] {
@@ -415,6 +410,10 @@ function getDefaultCharacterType(): PokemonType {
 function getRandomCharacter(): ICharacterDefinition {
   const characters = getAvailableCharacters();
   return characters[Math.floor(Math.random() * characters.length)];
+}
+
+function hasAvailableCharacters(): boolean {
+  return getAvailableCharacters().length > 0;
 }
 
 function getResourceRoot(uri: vscode.Uri): vscode.Uri {
@@ -1099,6 +1098,15 @@ export function activate(context: vscode.ExtensionContext) {
           await vscode.commands.executeCommand('animeCompanionsView.focus');
         }
         if (panel) {
+          if (!hasAvailableCharacters()) {
+            await vscode.window.showInformationMessage(
+              vscode.l10n.t(
+                'Add a custom companion from GIFs before spawning characters.',
+              ),
+            );
+            return;
+          }
+
           const characterOptions: Array<
             vscode.QuickPickItem & { value: PokemonType }
           > = getAvailableCharacters().map((character) => ({
@@ -1175,6 +1183,15 @@ export function activate(context: vscode.ExtensionContext) {
           await vscode.commands.executeCommand('animeCompanionsView.focus');
         }
         if (panel) {
+          if (!hasAvailableCharacters()) {
+            await vscode.window.showInformationMessage(
+              vscode.l10n.t(
+                'Add a custom companion from GIFs before spawning a random character.',
+              ),
+            );
+            return;
+          }
+
           const randomCharacter = getRandomCharacter();
           const spec = new PokemonSpecification(
             DEFAULT_COLOR,

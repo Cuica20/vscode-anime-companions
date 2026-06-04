@@ -22,41 +22,33 @@ You can also add GIF paths manually in VS Code settings:
 {
   "vscode-anime-companions.customCharacters": [
     {
-      "type": "hunterxhunter",
-      "name": "Hunter",
-      "idleGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/hunter/default_idle_8fps.gif",
-      "walkGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/hunter/default_walk_8fps.gif",
+      "type": "my-companion",
+      "name": "My Companion",
+      "idleGif": "C:/Users/richa/Pictures/anime/my_companion_idle.gif",
+      "walkGif": "C:/Users/richa/Pictures/anime/my_companion_walk.gif",
       "animationGifs": {
-        "swipe": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/hunter/default_idle_8fps.gif",
-        "walk_left": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/hunter/default_walk_8fps.gif"
+        "swipe": "C:/Users/richa/Pictures/anime/my_companion_swipe.gif",
+        "walk_left": "C:/Users/richa/Pictures/anime/my_companion_walk_left.gif"
       },
       "originalSpriteSize": 32
     },
     {
-      "type": "goku-custom",
-      "name": "Goku Custom",
-      "idleGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/goku/default_idle_8fps.gif",
-      "walkGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/goku/default_walk_8fps.gif",
-      "animationGifs": {
-        "swipe": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/naruto/default_idle_8fps.gif"
-      },
-      "originalSpriteSize": 32
-    },
-    {
-      "type": "sakura-custom",
-      "name": "Sakura Custom",
-      "idleGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/sakura/default_idle_8fps.gif",
-      "walkGif": "C:/Users/javierCuicapuza/vscode-anime-companions/media/custom/sakura/default_walk_8fps.gif",
-      "originalSpriteSize": 32
+      "type": "second-companion",
+      "name": "Second Companion",
+      "idleGif": "gifs/second_idle.gif",
+      "walkGif": "gifs/second_walk.gif",
+      "originalSpriteSize": 64
     }
   ],
   "vscode-anime-companions.defaultCharacters": [
-    { "type": "hinata", "name": "Hinata" },
-    { "type": "goku-custom", "name": "Goku Custom" },
-    { "type": "sakura-custom", "name": "Sakura Custom" }
+    { "type": "my-companion", "name": "My Companion" },
+    { "type": "second-companion", "name": "Second Companion" }
   ],
   "vscode-anime-companions.characterSize": "medium",
-  "vscode-anime-companions.position": "explorer"
+  "vscode-anime-companions.position": "explorer",
+  "vscode-anime-companions.animationTickMs": 50,
+  "vscode-anime-companions.stateDurationMultiplier": 2,
+  "vscode-anime-companions.imageRendering": "auto"
 }
 ```
 
@@ -112,7 +104,9 @@ Each custom character needs:
 - `animationGifs`: optional extra GIFs by animation label.
 - `originalSpriteSize`: original pixel size before scaling, usually `32`.
 
-The extension also includes starter packaged characters under `media/custom`, but those are only defaults. Other users can install the `.vsix` and configure their own GIF paths through Settings.
+Other users can install the extension and configure their own GIF paths through Settings.
+
+For public redistribution, only bundle GIFs you own or have permission to distribute. For most use cases, prefer user-configured GIF paths instead of shipping copyrighted artwork inside the extension.
 
 ## Build And Install
 
@@ -120,7 +114,7 @@ The extension also includes starter packaged characters under `media/custom`, bu
 npm install
 npm run compile
 npx @vscode/vsce package
-code --install-extension vscode-anime-companions-0.1.0.vsix
+code --install-extension vscode-anime-companions-0.1.1.vsix
 ```
 
 Use copyrighted character artwork only where you have the rights or for personal local use.
